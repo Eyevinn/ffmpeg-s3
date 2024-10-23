@@ -41,6 +41,7 @@ async function moveFile(src: string, dest: string) {
 export async function runFFmpeg(opts: FFmpegOptions & { stagingDir: string }) {
   const { source, dest, cmdString, ffmpegExecutable, stagingDir } = opts;
   const destUrl = toUrl(dest);
+  console.log(`cmdString: ${cmdString}`);
   const args = createFFmpegArgs(source, cmdString, toLocalFile(destUrl));
   console.log(args);
   const ffmpeg = ffmpegExecutable || 'ffmpeg';
