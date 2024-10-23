@@ -1,9 +1,9 @@
 <div align="center">
 <br />
 
-[![npm](https://img.shields.io/npm/v/@eyevinn/{{repo-name}}?style=flat-square)](https://www.npmjs.com/package/@eyevinn/ffmpeg-s3)
-[![github release](https://img.shields.io/github/v/release/Eyevinn/{{repo-name}}?style=flat-square)](https://github.com/Eyevinn/{{repo-name}}/releases)
-[![license](https://img.shields.io/github/license/eyevinn/{{repo-name}}.svg?style=flat-square)](LICENSE)
+[![npm](https://img.shields.io/npm/v/@eyevinn/ffmpeg-s3?style=flat-square)](https://www.npmjs.com/package/@eyevinn/ffmpeg-s3)
+[![github release](https://img.shields.io/github/v/release/Eyevinn/ffmpeg-s3?style=flat-square)](https://github.com/Eyevinn/{{repo-name}}/releases)
+[![license](https://img.shields.io/github/license/eyevinn/ffmpeg-s3.svg?style=flat-square)](LICENSE)
 
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-ff69b4.svg?style=flat-square)](https://github.com/eyevinn/{{repo-name}}/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
 [![made with hearth by Eyevinn](https://img.shields.io/badge/made%20with%20%E2%99%A5%20by-Eyevinn-59cbe8.svg?style=flat-square)](https://github.com/eyevinn)
