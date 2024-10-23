@@ -2,6 +2,7 @@
 
 import { Command } from 'commander';
 import { doFFmpeg } from './ffmpeg';
+import { stripQuotes } from './util';
 
 const cli = new Command();
 cli
@@ -26,7 +27,7 @@ cli
       console.log(`dest: ${options.destination}, source: ${options.input}`);
       await doFFmpeg({
         dest: options.destination || '.',
-        cmdString: ffmpegCmdString,
+        cmdString: stripQuotes(ffmpegCmdString),
         source: options.input,
         stagingDir: options.stagingDir,
         ffmpegExecutable:

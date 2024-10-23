@@ -50,3 +50,10 @@ export function splitCmdLineArgs(input: string): string[] {
 
   return result;
 }
+
+export function stripQuotes(input: string): string {
+  if (input.startsWith('"') && input.endsWith('"')) {
+    return input.slice(1, -1);
+  }
+  return input;
+}
