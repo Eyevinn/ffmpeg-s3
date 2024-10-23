@@ -15,11 +15,50 @@
 
 CLI and library for running ffmpeg and output result to an S3 bucket.
 
+[![Badge OSC](https://img.shields.io/badge/Evaluate-24243B?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTIiIGZpbGw9InVybCgjcGFpbnQwX2xpbmVhcl8yODIxXzMxNjcyKSIvPgo8Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI3IiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjIiLz4KPGRlZnM%2BCjxsaW5lYXJHcmFkaWVudCBpZD0icGFpbnQwX2xpbmVhcl8yODIxXzMxNjcyIiB4MT0iMTIiIHkxPSIwIiB4Mj0iMTIiIHkyPSIyNCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgo8c3RvcCBzdG9wLWNvbG9yPSIjQzE4M0ZGIi8%2BCjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzREQzlGRiIvPgo8L2xpbmVhckdyYWRpZW50Pgo8L2RlZnM%2BCjwvc3ZnPgo%3D)](https://app.osaas.io/browse/eyevinn-ffmpeg-s3)
+
 ## Requirements
 
 ffmpeg executable must be available in path under the name `ffmpeg`. When using S3 for output the AWS CLI must be installed and configured,.
 
 ## Installation / Usage
+
+### Eyevinn Open Source Cloud
+
+Install the OSC command line tool (0.15.3+):
+
+```
+% npm install -g @osaas/cli
+```
+
+Repackage the content from HLS to a MP4 container.
+
+```
+% export OSC_ACCESS_TOKEN=<personal-access-token>
+% osc create eyevinn-ffmpeg-s3 demo \
+  -o awsAccessKeyId="{{secrets.awsaccesskeyid}}" \
+  -o awsAccessKeyId="{{secrets.awssecretaccesskey}} \
+  -o cmdLineArgs='-i https://maitv-vod.lab.eyevinn.technology/VINN.mp4/master.m3u8 -d s3://lab-testcontent-output/demo/vinn.mp4 "-c:v copy -c:a copy"'
+```
+
+Repackage content from MP4 to a MOV container where the source is on S3 using signed URL for access.
+
+```
+% osc create eyevinn-ffmpeg-s3 demo \
+  -o awsAccessKeyId="{{secrets.awsaccesskeyid}}" \
+  -o awsSecretAccessKey="{{secrets.awssecretaccesskey}}" \
+  -o cmdLineArgs='-i https://lab-testcontent-input.s3.eu-north-1.amazonaws.com/NO_TIME_TO_DIE_short_Trailer_2021.mp4?SIGNED_URL -d s3://lab-testcontent-output/demo/trailer.mov "-c:v copy -c:a copy"'
+```
+
+Extract first 30 seconds of a video.
+
+```
+% osc create eyevinn-ffmpeg-s3 demo \
+  -o awsAccessKeyId="{{secrets.awsaccesskeyid}}" \
+  -o awsSecretAccessKey="{{secrets.awssecretaccesskey}}" \
+  -o cmdLineArgs='-i https://lab-testcontent-input.s3.eu-north-1.amazonaws.com/NO_TIME_TO_DIE_short_Trailer_2021.mp4?SIGNED_URL -d s3://lab-testcontent-output/demo/trailer-30sec.mov "-ss 0 -t 30 -c:v copy -c:a copy"'
+```
+
 
 ### CLI
 
