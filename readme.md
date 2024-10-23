@@ -42,14 +42,15 @@ import { doFFmpeg } from '@eyevinn/ffmpeg-s3';
 
 doFFMpeg({
   dest: 's3://lab-testcontent-output/demo/trailer.mov',
-  cmdString: "-c:v copy -c:a copy",
-  source: 'https://lab-testcontent-input.s3.eu-north-1.amazonaws.com/NO_TIME_TO_DIE_short_Trailer_2021.mp4?SIGNED_URL'
+  cmdString: '-c:v copy -c:a copy',
+  source:
+    'https://lab-testcontent-input.s3.eu-north-1.amazonaws.com/NO_TIME_TO_DIE_short_Trailer_2021.mp4?SIGNED_URL'
 })
   .then(() => {
-    console.log('done and uploaded')
+    console.log('done and uploaded');
   })
   .catch((err) => {
-    console.error(err)
+    console.error(err);
   });
 ```
 
