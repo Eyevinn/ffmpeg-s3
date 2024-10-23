@@ -1,20 +1,25 @@
 {
-  "name": "@eyevinn/typescript-library",
-  "version": "1.0.0",
-  "description": "The default typescript-library template for eyevinn projects",
-  "main": "src/index.ts",
+  "name": "@eyevinn/ffmpeg-s3",
+  "version": "0.1.0",
+  "description": "Run ffmpeg with output to S3",
+  "main": "dist/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc -p tsconfig.json",
+    "test": "jest --passWithNoTests",
     "prepare": "husky install",
     "lint": "eslint .",
     "pretty": "prettier --check --ignore-unknown .",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
-  "author": "",
+  "bin": {
+    "ffmpeg-s3": "dist/cli.js"
+  },
+  "author": "Eyevinn Technology <work@eyevinn.se>",
   "license": "MIT",
   "devDependencies": {
     "@commitlint/cli": "^17.4.2",
     "@commitlint/config-conventional": "^17.4.2",
+    "@types/mv": "^2.1.4",
     "@typescript-eslint/eslint-plugin": "^5.51.0",
     "@typescript-eslint/parser": "^5.51.0",
     "eslint": "^8.33.0",
@@ -23,5 +28,9 @@
     "husky": "^8.0.3",
     "prettier": "^2.8.4",
     "typescript": "^4.9.5"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "mv": "^2.1.1"
   }
 }

@@ -1,19 +1,7 @@
-<h1 align="center">
-  Project Name or Logo
-</h1>
-
-<div align="center">
-  project name - quick salespitch why this is awesome. 
-  <br />
-  <br />
-  :book: <b><a href="https://eyevinn.github.io/{{repo-name}}/">Read the documentation (github pages)</a></b> :eyes:
-  <br />
-</div>
-
 <div align="center">
 <br />
 
-[![npm](https://img.shields.io/npm/v/@eyevinn/{{repo-name}}?style=flat-square)](https://www.npmjs.com/package/@eyevinn/{{repo-name}})
+[![npm](https://img.shields.io/npm/v/@eyevinn/{{repo-name}}?style=flat-square)](https://www.npmjs.com/package/@eyevinn/ffmpeg-s3)
 [![github release](https://img.shields.io/github/v/release/Eyevinn/{{repo-name}}?style=flat-square)](https://github.com/Eyevinn/{{repo-name}}/releases)
 [![license](https://img.shields.io/github/license/eyevinn/{{repo-name}}.svg?style=flat-square)](LICENSE)
 
@@ -23,19 +11,78 @@
 
 </div>
 
-<!-- Add a description of the project here -->
+# ffmpeg-s3
+
+CLI and library for running ffmpeg and output result to an S3 bucket.
 
 ## Requirements
 
-<!--Add any external project dependencies such as node.js version etc here -->
+ffmpeg executable must be available in path under the name `ffmpeg`. When using S3 for output the AWS CLI must be installed and configured,.
 
 ## Installation / Usage
 
-<!--Add clear instructions on how to use the project here -->
+### CLI
+
+```
+% npm install -g ffmpeg-s3
+```
+
+Repackage the content from MP4 to a MOV container
+
+```
+% export AWS_ACCESS_KEY_ID=<aws-access-key-id>
+% export AWS_SECRET_ACCESS_KEY=<aws-secret-access-key>
+% ffmpeg-s3 -i https://lab-testcontent-input.s3.eu-north-1.amazonaws.com/NO_TIME_TO_DIE_short_Trailer_2021.mp4?SIGNED_URL -d s3://lab-testcontent-output/demo/trailer.mov "-c:v copy -c:a copy"
+```
+
+### Library
+
+```javascript
+import { doFFmpeg } from '@eyevinn/ffmpeg-s3';
+
+doFFMpeg({
+  dest: 's3://lab-testcontent-output/demo/trailer.mov',
+  cmdString: "-c:v copy -c:a copy",
+  source: 'https://lab-testcontent-input.s3.eu-north-1.amazonaws.com/NO_TIME_TO_DIE_short_Trailer_2021.mp4?SIGNED_URL'
+})
+  .then(() => {
+    console.log('done and uploaded')
+  })
+  .catch((err) => {
+    console.error(err)
+  });
+```
+
+### Docker
+
+```
+docker build -t ffmpeg-s3:local .
+```
+
+```
+docker run --rm \
+  -e AWS_ACCESS_KEY_ID=<aws-access-key-id> \
+  -e AWS_SECRET_ACCESS_KEY=<aws-secret-access-key> \
+  ffmpeg-s3:local \
+  ffmpeg-s3 \
+  -i https://lab-testcontent-input.s3.eu-north-1.amazonaws.com/NO_TIME_TO_DIE_short_Trailer_2021.mp4?SIGNED_URL \
+  -d s3://lab-testcontent-output/demo/trailer.mov \
+  -- "c:v copy c:a copy"
+```
 
 ## Development
 
-<!--Add clear instructions on how to start development of the project here -->
+Prerequisites:
+
+- ffmpeg
+- AWS cli
+
+Run script locally
+
+```
+% npm run build
+% node dist/cli.js -h
+```
 
 ## Contributing
 
