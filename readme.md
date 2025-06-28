@@ -25,38 +25,35 @@ ffmpeg executable must be available in path under the name `ffmpeg`. When using 
 
 ### Eyevinn Open Source Cloud
 
-Install the OSC command line tool (0.15.3+):
-
-```
-% npm install -g @osaas/cli
-```
-
 Repackage the content from HLS to a MP4 container.
 
 ```
 % export OSC_ACCESS_TOKEN=<personal-access-token>
-% osc create eyevinn-ffmpeg-s3 demo \
-  -o awsAccessKeyId="{{secrets.awsaccesskeyid}}" \
-  -o awsAccessKeyId="{{secrets.awssecretaccesskey}} \
-  -o cmdLineArgs="-i https://maitv-vod.lab.eyevinn.technology/VINN.mp4/master.m3u8 -c:v -c:a copy s3://lab-testcontent-output/demo/vinn.mp4"
+% npx -y @osaas/cli create eyevinn-ffmpeg-s3 demo \
+  -o awsAccessKeyId="{{secrets.accesskeyid}}" \
+  -o awsSecretAccessKey="{{secrets.secretaccesskey}}" \
+  -o s3EndpointUrl="https://eyevinnlab-birme.minio-minio.auto.prod.osaas.io" \
+  -o cmdLineArgs="-i https://maitv-vod.lab.eyevinn.technology/VINN.mp4/master.m3u8 -c:v copy -c:a copy s3://output/demo/VINN.mp4"
 ```
 
 Repackage content from MP4 to a MOV container where the source is on S3.
 
 ```
-% osc create eyevinn-ffmpeg-s3 demo \
-  -o awsAccessKeyId="{{secrets.awsaccesskeyid}}" \
-  -o awsSecretAccessKey="{{secrets.awssecretaccesskey}}" \
-  -o cmdLineArgs="-i s3://lab-testcontent-input/NO_TIME_TO_DIE_short_Trailer_2021.mp4 -c:v copy -c:a copy s3://lab-testcontent-output/demo/trailer.mov"
+% npx -y @osaas/cli create eyevinn-ffmpeg-s3 demo \
+  -o awsAccessKeyId="{{secrets.accesskeyid}}" \
+  -o awsSecretAccessKey="{{secrets.secretaccesskey}}" \
+  -o s3EndpointUrl="https://eyevinnlab-birme.minio-minio.auto.prod.osaas.io" \
+  -o cmdLineArgs="-i s3://input/VINN.mp4 -c:v copy -c:a copy s3://output/demo/trailer.mov"
 ```
 
 Extract first 30 seconds of a video.
 
 ```
-% osc create eyevinn-ffmpeg-s3 demo \
+% npx -y @osaas/cli create eyevinn-ffmpeg-s3 demo \
   -o awsAccessKeyId="{{secrets.awsaccesskeyid}}" \
   -o awsSecretAccessKey="{{secrets.awssecretaccesskey}}" \
-  -o cmdLineArgs="-i s3://lab-testcontent-input/NO_TIME_TO_DIE_short_Trailer_2021.mp4 -ss 0 -t 30 -c:v copy -c:a copy s3://lab-testcontent-output/demo/trailer-30sec.mov"
+  -o s3EndpointUrl="https://eyevinnlab-birme.minio-minio.auto.prod.osaas.io" \
+  -o cmdLineArgs="-i s3://input/VINN.mp4 -ss 0 -t 30 -c:v copy -c:a copy s3://output/demo/trailer-30sec.mov"
 ```
 
 ### CLI
@@ -70,7 +67,7 @@ Repackage the content from MP4 to a MOV container
 ```
 % export AWS_ACCESS_KEY_ID=<aws-access-key-id>
 % export AWS_SECRET_ACCESS_KEY=<aws-secret-access-key>
-% ffmpeg-s3 -i https://lab-testcontent-input.s3.eu-north-1.amazonaws.com/NO_TIME_TO_DIE_short_Trailer_2021.mp4?SIGNED_URL -c:v copy -c:a copy s3://lab-testcontent-output/demo/trailer.mov
+% ffmpeg-s3 -i s3://lab-testcontent-input.s3/NO_TIME_TO_DIE_short_Trailer_2021.mp4 -c:v copy -c:a copy s3://lab-testcontent-output/demo/trailer.mov
 ```
 
 ### Library
