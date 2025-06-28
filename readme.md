@@ -59,7 +59,6 @@ Extract first 30 seconds of a video.
   -o cmdLineArgs="-i s3://lab-testcontent-input/NO_TIME_TO_DIE_short_Trailer_2021.mp4 -ss 0 -t 30 -c:v copy -c:a copy s3://lab-testcontent-output/demo/trailer-30sec.mov"
 ```
 
-
 ### CLI
 
 ```
@@ -80,7 +79,8 @@ Repackage the content from MP4 to a MOV container
 import { doFFmpeg } from '@eyevinn/ffmpeg-s3';
 
 doFFMpeg({
-  cmdString: '-i s3://lab-testcontent-input/NO_TIME_TO_DIE_short_Trailer_2021.mp4 -c:v copy -c:a copy s3://lab-testcontent-output/demo/trailer.mov'
+  cmdString:
+    '-i s3://lab-testcontent-input/NO_TIME_TO_DIE_short_Trailer_2021.mp4 -c:v copy -c:a copy s3://lab-testcontent-output/demo/trailer.mov'
 })
   .then(() => {
     console.log('done and uploaded');
