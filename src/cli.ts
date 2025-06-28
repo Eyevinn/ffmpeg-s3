@@ -4,10 +4,10 @@ import { Command } from 'commander';
 import { doFFmpeg } from './ffmpeg';
 import { stripQuotes } from './util';
 
+/*
 const cli = new Command();
 cli
   .description(`Run ffmpeg and output to S3 or local`)
-  .option('-i, --input <input>', 'Input URL')
   .option(
     '--staging-dir <stagingDir>',
     'Staging directory (default: /tmp/data)'
@@ -16,19 +16,12 @@ cli
     '--ffmpeg-executable <ffmpegExecutable>',
     'Path to ffmpeg executable (default: ffmpeg)'
   )
-  .option(
-    '-d, --destination <dest>',
-    'Destination file URL (supported protocols: s3, local file)'
-  )
   .argument('<ffmpegCmdString>', 'ffmpeg command string')
   .action(async (ffmpegCmdString, options) => {
     try {
       console.log('Running ffmpeg');
-      console.log(`dest: ${options.destination}, source: ${options.input}`);
       await doFFmpeg({
-        dest: options.destination || '.',
         cmdString: stripQuotes(ffmpegCmdString),
-        source: options.input,
         stagingDir: options.stagingDir,
         ffmpegExecutable:
           options.ffmpegExecutable || process.env.FFMPEG_EXECUTABLE
@@ -39,3 +32,21 @@ cli
   });
 
 cli.parseAsync(process.argv);
+
+*/
+
+async function main(args: string[]) {
+  try {
+    const cmdString = stripQuotes(args.join(' ')).trim();
+    console.log('Running ffmpeg with command:', cmdString);
+    await doFFmpeg({
+      cmdString,
+      stagingDir: process.env.STAGING_DIR || '/tmp/data',
+      ffmpegExecutable: process.env.FFMPEG_EXECUTABLE
+    });
+  } catch (err) {
+    console.log((err as Error).message);
+  }
+}
+
+main(process.argv.slice(2));
