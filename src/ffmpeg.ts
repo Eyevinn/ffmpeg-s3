@@ -18,7 +18,7 @@ export async function doFFmpeg(opts: FFmpegOptions) {
   if (!opts.cmdString) {
     throw new Error('No ffmpeg command string provided');
   }
-  const { dest, actualCmdString } = await rewriteCmdString(
+  const { dest, actualCmdString, s3SegmentPattern } = await rewriteCmdString(
     opts.cmdString,
     stagingDir
   );
@@ -26,16 +26,23 @@ export async function doFFmpeg(opts: FFmpegOptions) {
   console.log(`Staging directory: ${stagingDir}`);
   console.log(`Actual command string: ${actualCmdString}`);
   await runFFmpeg({ ...opts, actualCmdString, stagingDir });
-  await uploadResult(dest, stagingDir);
+  await uploadResult(dest, stagingDir, s3SegmentPattern);
 }
 
 export async function rewriteCmdString(
   cmdString: string,
   stagingDir: string
-): Promise<{ source: URL; dest: URL; actualCmdString: string }> {
+): Promise<{
+  source: URL;
+  dest: URL;
+  actualCmdString: string;
+  s3SegmentPattern?: string;
+}> {
   const args = splitCmdLineArgs(cmdString);
   let output = '';
   let input;
+  let s3SegmentPattern: string | undefined;
+  const s3UrlReplacements: { [key: string]: string } = {};
 
   // Find input (-i flag)
   args.find((arg, i) => {
@@ -68,6 +75,51 @@ export async function rewriteCmdString(
       throw new Error('Failed to generate signed URL');
     }
     inputUrl = new URL(stdout.toString().trim());
+    s3UrlReplacements[input] = inputUrl.toString();
+  }
+
+  // Find and process all S3 URLs in arguments
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+
+    // Check for HLS segment filename pattern
+    if (args[i - 1] === '-hls_segment_filename' && arg.startsWith('s3://')) {
+      s3SegmentPattern = arg;
+      // Replace the S3 segment pattern with a local pattern
+      const localSegmentPattern = arg.split('/').pop() || 'segment_%03d.ts';
+      s3UrlReplacements[arg] = localSegmentPattern;
+      continue;
+    }
+
+    if (arg.startsWith('s3://')) {
+      // Skip if this is the input we already processed
+      if (arg === input) continue;
+      // Skip if this is a segment pattern (handled above)
+      if (arg === s3SegmentPattern) continue;
+
+      const s3Url = toUrl(arg);
+      console.log(`Generating signed URL for S3 argument: ${s3Url.toString()}`);
+
+      const { status, stdout, stderr } = spawnSync('aws', [
+        's3',
+        ...(process.env.S3_ENDPOINT_URL
+          ? ['--endpoint-url', process.env.S3_ENDPOINT_URL]
+          : []),
+        'presign',
+        s3Url.toString(),
+        '--expires-in',
+        '21600' // 6 hour expiration
+      ]);
+
+      if (status !== 0) {
+        console.error(
+          `Failed to generate signed URL for ${arg}: ${stderr.toString()}`
+        );
+        throw new Error(`Failed to generate signed URL for ${arg}`);
+      }
+
+      s3UrlReplacements[arg] = stdout.toString().trim();
+    }
   }
 
   // Find output (last argument that's not a flag)
@@ -82,10 +134,20 @@ export async function rewriteCmdString(
   }
   const outputUrl = toUrl(output);
   const localOutputFile = join(stagingDir, toLocalFile(outputUrl));
-  const actualCmdString = cmdString
-    .replace(input, inputUrl.toString())
-    .replace(output, localOutputFile);
-  return { source: inputUrl, dest: outputUrl, actualCmdString };
+
+  // Apply all S3 URL replacements and output replacement
+  let actualCmdString = cmdString;
+  for (const [originalUrl, replacement] of Object.entries(s3UrlReplacements)) {
+    actualCmdString = actualCmdString.replace(originalUrl, replacement);
+  }
+  actualCmdString = actualCmdString.replace(output, localOutputFile);
+
+  return {
+    source: inputUrl,
+    dest: outputUrl,
+    actualCmdString,
+    s3SegmentPattern
+  };
 }
 
 export async function prepare(
@@ -131,7 +193,11 @@ export function createFFmpegArgs(cmdString: string) {
   return cmdInputs.concat(splitCmdLineArgs(cmdString));
 }
 
-export async function uploadResult(dest: URL, stagingDir: string) {
+export async function uploadResult(
+  dest: URL,
+  stagingDir: string,
+  s3SegmentPattern?: string
+) {
   if (!dest.protocol || dest.protocol === 'file:') {
     if (dest.pathname.endsWith('/')) {
       await mkdir(toLocalDir(dest), { recursive: true });
@@ -187,8 +253,42 @@ export async function uploadResult(dest: URL, stagingDir: string) {
         }
         throw new Error('Upload failed');
       }
+      console.log(`Uploaded ${dest.toString()}`);
     }
   } else {
     throw new Error(`Unsupported protocol for upload: ${dest.protocol}`);
+  }
+
+  // Upload HLS segments if there's an S3 segment pattern
+  if (s3SegmentPattern) {
+    console.log(`Uploading HLS segments to ${s3SegmentPattern}`);
+    const files = await readdir(stagingDir);
+    const segmentFiles = files.filter((file) => file.endsWith('.ts'));
+
+    for (const segmentFile of segmentFiles) {
+      // Parse the segment pattern to get the base S3 path
+      const segmentS3Path = s3SegmentPattern.replace(
+        /segment_%\d+d\.ts$/,
+        segmentFile
+      );
+
+      const { status, stderr } = spawnSync('aws', [
+        's3',
+        ...(process.env.S3_ENDPOINT_URL
+          ? ['--endpoint-url', process.env.S3_ENDPOINT_URL]
+          : []),
+        'cp',
+        join(stagingDir, segmentFile),
+        segmentS3Path
+      ]);
+
+      if (status !== 0) {
+        if (stderr) {
+          console.log(stderr.toString());
+        }
+        throw new Error(`Upload of segment ${segmentFile} failed`);
+      }
+    }
+    console.log(`Uploaded ${segmentFiles.length} HLS segments`);
   }
 }
