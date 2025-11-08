@@ -147,8 +147,8 @@ export async function rewriteCmdString(
     throw new Error('No output file specified in ffmpeg command');
   }
   const outputUrl = toUrl(output);
-  
-  // For HLS workflows, always write output locally first  
+
+  // For HLS workflows, always write output locally first
   const localOutputFile = join(stagingDir, toLocalFile(outputUrl));
 
   // Apply all S3 URL replacements and output replacement
@@ -217,11 +217,14 @@ export async function uploadResult(
   // For HLS workflows with segments, sync entire staging directory to S3
   if (s3SegmentPattern && dest.protocol === 's3:') {
     // Extract the base S3 path from the segment pattern or dest
-    const s3BasePath = s3SegmentPattern.substring(0, s3SegmentPattern.lastIndexOf('/') + 1);
+    const s3BasePath = s3SegmentPattern.substring(
+      0,
+      s3SegmentPattern.lastIndexOf('/') + 1
+    );
     const s3BaseUrl = toUrl(s3BasePath);
-    
+
     console.log(`Syncing HLS output to ${s3BaseUrl.toString()}`);
-    
+
     const { status, stderr } = spawnSync('aws', [
       's3',
       ...(process.env.S3_ENDPOINT_URL
@@ -231,14 +234,14 @@ export async function uploadResult(
       stagingDir + '/',
       s3BaseUrl.toString()
     ]);
-    
+
     if (status !== 0) {
       if (stderr) {
         console.log(stderr.toString());
       }
       throw new Error(`HLS sync failed: ${stderr.toString()}`);
     }
-    
+
     console.log(`Successfully synced HLS output to ${s3BaseUrl.toString()}`);
     return;
   }
@@ -257,18 +260,20 @@ export async function uploadResult(
       const fileName = dest.pathname.split('/').pop() || '';
       const files = await readdir(stagingDir);
       const file = files.find((f) => f === fileName);
-      
+
       if (!file) {
-        throw new Error(`Output file ${fileName} not found in staging directory`);
+        throw new Error(
+          `Output file ${fileName} not found in staging directory`
+        );
       }
-      
+
       // Ensure target directory exists
       await mkdir(dirname(dest.pathname), { recursive: true });
       await moveFile(join(stagingDir, file), dest.pathname);
     }
     return;
   }
-  
+
   if (dest.protocol === 's3:') {
     if (dest.pathname.endsWith('/')) {
       const { status, stderr } = spawnSync('aws', [
@@ -292,11 +297,13 @@ export async function uploadResult(
       const fileName = dest.pathname.split('/').pop() || '';
       const files = await readdir(stagingDir);
       const file = files.find((f) => f === fileName);
-      
+
       if (!file) {
-        throw new Error(`Output file ${fileName} not found in staging directory`);
+        throw new Error(
+          `Output file ${fileName} not found in staging directory`
+        );
       }
-      
+
       const localFilePath = join(stagingDir, file);
       const { status, stderr } = spawnSync('aws', [
         's3',
