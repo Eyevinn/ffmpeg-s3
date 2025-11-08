@@ -78,13 +78,21 @@ export async function rewriteCmdString(
     s3UrlReplacements[input] = inputUrl.toString();
   }
 
-  // Find and process all S3 URLs in arguments
+  // First pass: identify HLS segment patterns
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (args[i - 1] === '-hls_segment_filename' && arg.startsWith('s3://')) {
+      s3SegmentPattern = arg;
+      break; // Found it, exit early
+    }
+  }
+
+  // Second pass: process all S3 URLs with segment pattern knowledge
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
 
     // Check for HLS segment filename pattern
     if (args[i - 1] === '-hls_segment_filename' && arg.startsWith('s3://')) {
-      s3SegmentPattern = arg;
       // Replace the S3 segment pattern with a local pattern
       const localSegmentPattern = arg.split('/').pop() || 'segment_%03d.ts';
       s3UrlReplacements[arg] = localSegmentPattern;
@@ -94,8 +102,14 @@ export async function rewriteCmdString(
     if (arg.startsWith('s3://')) {
       // Skip if this is the input we already processed
       if (arg === input) continue;
-      // Skip if this is a segment pattern (handled above)
-      if (arg === s3SegmentPattern) continue;
+
+      // For HLS workflows, if we have segments, treat all S3 outputs as local first
+      if (s3SegmentPattern) {
+        // Keep S3 URLs as local files for HLS workflows
+        const localFileName = arg.split('/').pop() || 'output';
+        s3UrlReplacements[arg] = localFileName;
+        continue;
+      }
 
       const s3Url = toUrl(arg);
       console.log(`Generating signed URL for S3 argument: ${s3Url.toString()}`);
@@ -133,6 +147,8 @@ export async function rewriteCmdString(
     throw new Error('No output file specified in ffmpeg command');
   }
   const outputUrl = toUrl(output);
+
+  // For HLS workflows, always write output locally first
   const localOutputFile = join(stagingDir, toLocalFile(outputUrl));
 
   // Apply all S3 URL replacements and output replacement
@@ -198,6 +214,39 @@ export async function uploadResult(
   stagingDir: string,
   s3SegmentPattern?: string
 ) {
+  // For HLS workflows with segments, sync entire staging directory to S3
+  if (s3SegmentPattern && dest.protocol === 's3:') {
+    // Extract the base S3 path from the segment pattern or dest
+    const s3BasePath = s3SegmentPattern.substring(
+      0,
+      s3SegmentPattern.lastIndexOf('/') + 1
+    );
+    const s3BaseUrl = toUrl(s3BasePath);
+
+    console.log(`Syncing HLS output to ${s3BaseUrl.toString()}`);
+
+    const { status, stderr } = spawnSync('aws', [
+      's3',
+      ...(process.env.S3_ENDPOINT_URL
+        ? ['--endpoint-url', process.env.S3_ENDPOINT_URL]
+        : []),
+      'sync',
+      stagingDir + '/',
+      s3BaseUrl.toString()
+    ]);
+
+    if (status !== 0) {
+      if (stderr) {
+        console.log(stderr.toString());
+      }
+      throw new Error(`HLS sync failed: ${stderr.toString()}`);
+    }
+
+    console.log(`Successfully synced HLS output to ${s3BaseUrl.toString()}`);
+    return;
+  }
+
+  // Handle non-HLS cases
   if (!dest.protocol || dest.protocol === 'file:') {
     if (dest.pathname.endsWith('/')) {
       await mkdir(toLocalDir(dest), { recursive: true });
@@ -211,10 +260,20 @@ export async function uploadResult(
       const fileName = dest.pathname.split('/').pop() || '';
       const files = await readdir(stagingDir);
       const file = files.find((f) => f === fileName);
-      await moveFile(join(stagingDir, file || ''), dest.pathname);
+
+      if (!file) {
+        throw new Error(
+          `Output file ${fileName} not found in staging directory`
+        );
+      }
+
+      // Ensure target directory exists
+      await mkdir(dirname(dest.pathname), { recursive: true });
+      await moveFile(join(stagingDir, file), dest.pathname);
     }
     return;
   }
+
   if (dest.protocol === 's3:') {
     if (dest.pathname.endsWith('/')) {
       const { status, stderr } = spawnSync('aws', [
@@ -238,57 +297,32 @@ export async function uploadResult(
       const fileName = dest.pathname.split('/').pop() || '';
       const files = await readdir(stagingDir);
       const file = files.find((f) => f === fileName);
+
+      if (!file) {
+        throw new Error(
+          `Output file ${fileName} not found in staging directory`
+        );
+      }
+
+      const localFilePath = join(stagingDir, file);
       const { status, stderr } = spawnSync('aws', [
         's3',
         ...(process.env.S3_ENDPOINT_URL
           ? ['--endpoint-url', process.env.S3_ENDPOINT_URL]
           : []),
         'cp',
-        join(stagingDir, file || ''),
+        localFilePath,
         dest.toString()
       ]);
       if (status !== 0) {
         if (stderr) {
           console.log(stderr.toString());
         }
-        throw new Error('Upload failed');
+        throw new Error(`Upload failed: ${stderr.toString()}`);
       }
       console.log(`Uploaded ${dest.toString()}`);
     }
   } else {
     throw new Error(`Unsupported protocol for upload: ${dest.protocol}`);
-  }
-
-  // Upload HLS segments if there's an S3 segment pattern
-  if (s3SegmentPattern) {
-    console.log(`Uploading HLS segments to ${s3SegmentPattern}`);
-    const files = await readdir(stagingDir);
-    const segmentFiles = files.filter((file) => file.endsWith('.ts'));
-
-    for (const segmentFile of segmentFiles) {
-      // Parse the segment pattern to get the base S3 path
-      const segmentS3Path = s3SegmentPattern.replace(
-        /segment_%\d+d\.ts$/,
-        segmentFile
-      );
-
-      const { status, stderr } = spawnSync('aws', [
-        's3',
-        ...(process.env.S3_ENDPOINT_URL
-          ? ['--endpoint-url', process.env.S3_ENDPOINT_URL]
-          : []),
-        'cp',
-        join(stagingDir, segmentFile),
-        segmentS3Path
-      ]);
-
-      if (status !== 0) {
-        if (stderr) {
-          console.log(stderr.toString());
-        }
-        throw new Error(`Upload of segment ${segmentFile} failed`);
-      }
-    }
-    console.log(`Uploaded ${segmentFiles.length} HLS segments`);
   }
 }
