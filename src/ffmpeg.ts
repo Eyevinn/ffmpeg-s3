@@ -244,11 +244,20 @@ export async function uploadResult(
 ) {
   // For HLS workflows with segments, sync entire staging directory to S3
   if (s3SegmentPattern && dest.protocol === 's3:') {
-    // Extract the base S3 path from the segment pattern or dest
-    const s3BasePath = s3SegmentPattern.substring(
-      0,
-      s3SegmentPattern.lastIndexOf('/') + 1
-    );
+    // Extract the base S3 path, removing variant stream directories and filenames
+    let s3BasePath = s3SegmentPattern;
+
+    // Remove the filename part (segment_%03d.ts)
+    s3BasePath = s3BasePath.substring(0, s3BasePath.lastIndexOf('/') + 1);
+
+    // If this is a variant stream path (contains %v), remove that directory level too
+    if (s3BasePath.includes('%v')) {
+      s3BasePath = s3BasePath.substring(
+        0,
+        s3BasePath.lastIndexOf('/', s3BasePath.length - 2) + 1
+      );
+    }
+
     const s3BaseUrl = toUrl(s3BasePath);
 
     console.log(`Syncing HLS output to ${s3BaseUrl.toString()}`);
