@@ -94,8 +94,17 @@ export async function rewriteCmdString(
     // Check for HLS segment filename pattern
     if (args[i - 1] === '-hls_segment_filename' && arg.startsWith('s3://')) {
       // Replace the S3 segment pattern with a local pattern
-      const localSegmentPattern = arg.split('/').pop() || 'segment_%03d.ts';
-      s3UrlReplacements[arg] = localSegmentPattern;
+      if (arg.includes('%v')) {
+        // For variant streams, preserve directory structure
+        const urlObj = toUrl(arg);
+        const pathParts = urlObj.pathname.split('/');
+        const relevantParts = pathParts.slice(-2); // Keep last 2 parts: stream_%v/segment_%03d.ts
+        const localVariantPattern = relevantParts.join('/');
+        s3UrlReplacements[arg] = localVariantPattern;
+      } else {
+        const localSegmentPattern = arg.split('/').pop() || 'segment_%03d.ts';
+        s3UrlReplacements[arg] = localSegmentPattern;
+      }
       continue;
     }
 
@@ -105,9 +114,19 @@ export async function rewriteCmdString(
 
       // For HLS workflows, if we have segments, treat all S3 outputs as local first
       if (s3SegmentPattern) {
-        // Keep S3 URLs as local files for HLS workflows
-        const localFileName = arg.split('/').pop() || 'output';
-        s3UrlReplacements[arg] = localFileName;
+        // For HLS variant streams, preserve directory structure
+        if (arg.includes('%v')) {
+          // Extract relative path from S3 URL for variant streams
+          const urlObj = toUrl(arg);
+          const pathParts = urlObj.pathname.split('/');
+          const relevantParts = pathParts.slice(-2); // Keep last 2 parts: stream_%v/playlist.m3u8
+          const localVariantPath = relevantParts.join('/');
+          s3UrlReplacements[arg] = localVariantPath;
+        } else {
+          // Keep S3 URLs as local files for HLS workflows
+          const localFileName = arg.split('/').pop() || 'output';
+          s3UrlReplacements[arg] = localFileName;
+        }
         continue;
       }
 
@@ -148,8 +167,17 @@ export async function rewriteCmdString(
   }
   const outputUrl = toUrl(output);
 
-  // For HLS workflows, always write output locally first
-  const localOutputFile = join(stagingDir, toLocalFile(outputUrl));
+  // For HLS workflows, determine the appropriate local output
+  let localOutputFile: string;
+  if (s3SegmentPattern && output.startsWith('s3://')) {
+    // For HLS variant streams, use the replacement mapping we already created
+    localOutputFile = join(
+      stagingDir,
+      s3UrlReplacements[output] || toLocalFile(outputUrl)
+    );
+  } else {
+    localOutputFile = join(stagingDir, toLocalFile(outputUrl));
+  }
 
   // Apply all S3 URL replacements and output replacement
   let actualCmdString = cmdString;
