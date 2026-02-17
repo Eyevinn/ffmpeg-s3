@@ -87,6 +87,17 @@ export async function rewriteCmdString(
     }
   }
 
+  // Find output (last argument that's not a flag) before S3 replacement
+  for (let i = args.length - 1; i >= 0; i--) {
+    if (!args[i].startsWith('-')) {
+      output = args[i];
+      break;
+    }
+  }
+  if (!output) {
+    throw new Error('No output file specified in ffmpeg command');
+  }
+
   // Second pass: process all S3 URLs with segment pattern knowledge
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -111,6 +122,8 @@ export async function rewriteCmdString(
     if (arg.startsWith('s3://')) {
       // Skip if this is the input we already processed
       if (arg === input) continue;
+      // Skip output — it should be written locally, then uploaded
+      if (arg === output) continue;
 
       // For HLS workflows, if we have segments, treat all S3 outputs as local first
       if (s3SegmentPattern) {
@@ -155,16 +168,6 @@ export async function rewriteCmdString(
     }
   }
 
-  // Find output (last argument that's not a flag)
-  for (let i = args.length - 1; i >= 0; i--) {
-    if (!args[i].startsWith('-')) {
-      output = args[i];
-      break;
-    }
-  }
-  if (!output) {
-    throw new Error('No output file specified in ffmpeg command');
-  }
   const outputUrl = toUrl(output);
 
   // For HLS workflows, determine the appropriate local output
