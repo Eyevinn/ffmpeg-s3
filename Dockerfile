@@ -1,14 +1,13 @@
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /source
 COPY package.json package-lock.json ./
 COPY . .
 RUN npm ci
 RUN npm run build
 
-FROM alpine:3.19 AS runner
+FROM node:24-alpine AS runner
 RUN apk update && apk upgrade
 RUN apk --no-cache add curl
-RUN apk --no-cache add nodejs npm
 RUN apk --no-cache add aws-cli
 RUN apk --no-cache add ffmpeg
 RUN adduser --disabled-password --gecos '' --shell /bin/sh nodejs
