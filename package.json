@@ -15,6 +15,9 @@
   "bin": {
     "ffmpeg-s3": "dist/cli.js"
   },
+  "engines": {
+    "node": "^22.23.4 || >=24.22.1"
+  },
   "author": "Eyevinn Technology <work@eyevinn.se>",
   "license": "MIT",
   "devDependencies": {
